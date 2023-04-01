@@ -1,13 +1,9 @@
 import math
-import html
-
 import gi
+
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Gio, GdkPixbuf, GObject, GLib, Gdk
-
-import pathlib
-WORK_DIR = str(pathlib.Path(__file__).parent.resolve())
 
 
 class YamusicWindow(Gtk.Window):
@@ -92,10 +88,8 @@ class YamusicWindow(Gtk.Window):
 
 
 class Library(Gtk.Grid):
-    __gsignals__ = {
-        "playlist-clicked": (GObject.SIGNAL_RUN_FIRST, None, (GObject.TYPE_PYOBJECT,)),
-        "track-clicked": (GObject.SIGNAL_RUN_FIRST, None, (GObject.TYPE_PYOBJECT,)),
-    }
+    __gsignals__ = {"playlist-clicked": (GObject.SIGNAL_RUN_FIRST, None, (GObject.TYPE_PYOBJECT,)),
+                    "track-clicked": (GObject.SIGNAL_RUN_FIRST, None, (GObject.TYPE_PYOBJECT,)), }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -181,8 +175,8 @@ class Library(Gtk.Grid):
         self.play_playlist_button.set_margin_bottom(10)
         self.play_playlist_button.set_child(
             Gtk.Image.new_from_gicon(Gio.ThemedIcon.new("media-playback-start-symbolic")))
-        self.playlist_info_grid.attach_next_to(
-            self.play_playlist_button, self.playlist_info_label, Gtk.PositionType.BOTTOM, 1, 1)
+        self.playlist_info_grid.attach_next_to(self.play_playlist_button, self.playlist_info_label,
+                                               Gtk.PositionType.BOTTOM, 1, 1)
 
         self.playlist_displayed_scrolled = Gtk.ScrolledWindow()
         self.playlist_displayed_scrolled.set_hexpand(True)
@@ -198,13 +192,13 @@ class Library(Gtk.Grid):
         self.tracks_widgets = []
 
     def clear_playlists(self):
-        [self.users_playlists_box.remove(self.users_playlists_box.get_first_child())
-         for _ in range(len(self.playlists_widgets))]
+        [self.users_playlists_box.remove(self.users_playlists_box.get_first_child()) for _ in
+         range(len(self.playlists_widgets))]
         self.playlists_widgets = []
 
     def clear_tracks(self):
-        [self.playlist_displayed_tracks_box.remove(track)
-         for track in self.tracks_widgets if track.get_parent() == self.playlist_displayed_tracks_box]
+        [self.playlist_displayed_tracks_box.remove(track) for track in self.tracks_widgets if
+         track.get_parent() == self.playlist_displayed_tracks_box]
         self.tracks_widgets = []
 
     def add_playlist(self, playlist=None):
@@ -274,7 +268,7 @@ class TrackWidget(Gtk.Button):
         self.label.set_hexpand(True)
 
         self.label.set_markup((f"<b>{self.title}</b>\n"
-                              f"<small><i>{self.artists}</i></small>"))
+                               f"<small><i>{self.artists}</i></small>"))
         self.grid.attach_next_to(self.label, self.track_number_label, Gtk.PositionType.RIGHT, 1, 1)
 
         self.downloading_spinner_box = Gtk.Box()
@@ -372,13 +366,7 @@ class PlaylistWidget(Gtk.Button):
             cover = GdkPixbuf.Pixbuf.new(GdkPixbuf.Colorspace.RGB, True, 8, 50, 50)
             cover.fill(0x00001230ff)
             cover = GdkPixbuf.Pixbuf.new_from_file("/src/data/yamusic-icon-svg.svg")
-            playlist = {
-                "title": "test",
-                "kind": -1,
-                "owner_id": -1,
-                "cover": cover,
-                "tracks": []
-            }
+            playlist = {"title": "test", "kind": -1, "owner_id": -1, "cover": cover, "tracks": []}
         self.playlist = playlist
 
         self.box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
@@ -445,8 +433,8 @@ class PlayerControlsFrame(Gtk.Frame):
         self.play_track_button.set_margin_bottom(10)
         self.play_track_button.set_valign(Gtk.Align.END)
         self.play_track_button.set_child(Gtk.Image.new_from_gicon(Gio.ThemedIcon.new("media-playback-start-symbolic")))
-        self.player_controls_grid.attach_next_to(
-            self.play_track_button, self.prev_track_button, Gtk.PositionType.RIGHT, 1, 3)
+        self.player_controls_grid.attach_next_to(self.play_track_button, self.prev_track_button, Gtk.PositionType.RIGHT,
+                                                 1, 3)
 
         # Adding next track button
         self.next_track_button = Gtk.Button()
@@ -455,8 +443,8 @@ class PlayerControlsFrame(Gtk.Frame):
         self.next_track_button.set_margin_bottom(10)
         self.next_track_button.set_valign(Gtk.Align.END)
         self.next_track_button.set_child(Gtk.Image.new_from_gicon(Gio.ThemedIcon.new("media-skip-forward-symbolic")))
-        self.player_controls_grid.attach_next_to(
-            self.next_track_button, self.play_track_button, Gtk.PositionType.RIGHT, 1, 3)
+        self.player_controls_grid.attach_next_to(self.next_track_button, self.play_track_button, Gtk.PositionType.RIGHT,
+                                                 1, 3)
 
         # Adding shuffle button
         self.shuffle_playlist_button = Gtk.Button()
@@ -472,16 +460,15 @@ class PlayerControlsFrame(Gtk.Frame):
         self.loop_playlist_button.set_size_request(10, 10)
         self.loop_playlist_button.set_vexpand(True)
         self.loop_playlist_button.set_valign(Gtk.Align.END)
-        self.loop_playlist_button.set_child(
-            Gtk.Image.new_from_gicon(Gio.ThemedIcon.new("media-playlist-repeat")))
+        self.loop_playlist_button.set_child(Gtk.Image.new_from_gicon(Gio.ThemedIcon.new("media-playlist-repeat")))
         self.player_controls_grid.attach(self.loop_playlist_button, 4, 1, 1, 1)
 
         # Adding track slider
         self.track_slider = Gtk.Scale.new_with_range(orientation=Gtk.Orientation.HORIZONTAL, min=0, max=100, step=1)
         self.track_slider.set_hexpand(True)
         self.track_slider.set_valign(Gtk.Align.END)
-        self.player_controls_grid.attach_next_to(
-            self.track_slider, self.loop_playlist_button, Gtk.PositionType.RIGHT, 1, 1)
+        self.player_controls_grid.attach_next_to(self.track_slider, self.loop_playlist_button, Gtk.PositionType.RIGHT,
+                                                 1, 1)
 
         self.track_slider_event_controller = Gtk.GestureClick()
         self.track_slider.add_controller(self.track_slider_event_controller)
@@ -518,8 +505,8 @@ class PlayerControlsFrame(Gtk.Frame):
         self.track_volume_button.set_margin_start(5)
         self.track_volume_button.set_valign(Gtk.Align.END)
         self.track_volume_button.set_child(Gtk.Image.new_from_gicon(Gio.ThemedIcon.new("audio-volume-high-symbolic")))
-        self.player_controls_grid.attach_next_to(
-            self.track_volume_button, self.track_timer, Gtk.PositionType.RIGHT, 1, 1)
+        self.player_controls_grid.attach_next_to(self.track_volume_button, self.track_timer, Gtk.PositionType.RIGHT, 1,
+                                                 1)
 
         self.track_volume_button_gesture = Gtk.EventControllerScroll.new(Gtk.EventControllerScrollFlags.VERTICAL)
         self.track_volume_button.add_controller(self.track_volume_button_gesture)
@@ -543,8 +530,8 @@ class PlayerControlsFrame(Gtk.Frame):
         self.show_queue_button.set_vexpand(True)
         self.show_queue_button.set_valign(Gtk.Align.END)
         self.show_queue_button.set_child(Gtk.Image.new_from_gicon(Gio.ThemedIcon.new("format-indent-less-symbolic")))
-        self.player_controls_grid.attach_next_to(
-            self.show_queue_button, self.track_volume_button, Gtk.PositionType.RIGHT, 1, 1)
+        self.player_controls_grid.attach_next_to(self.show_queue_button, self.track_volume_button,
+                                                 Gtk.PositionType.RIGHT, 1, 1)
 
         # Adding download track button
         self.download_track_button = Gtk.Button()
@@ -553,5 +540,5 @@ class PlayerControlsFrame(Gtk.Frame):
         self.download_track_button.set_margin_end(5)
         self.download_track_button.set_valign(Gtk.Align.END)
         self.download_track_button.set_child(Gtk.Image.new_from_gicon(Gio.ThemedIcon.new("folder-download-symbolic")))
-        self.player_controls_grid.attach_next_to(
-            self.download_track_button, self.show_queue_button, Gtk.PositionType.RIGHT, 1, 1)
+        self.player_controls_grid.attach_next_to(self.download_track_button, self.show_queue_button,
+                                                 Gtk.PositionType.RIGHT, 1, 1)

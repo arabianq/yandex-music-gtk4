@@ -1,22 +1,18 @@
-import yandex_music
-
-from ui import *
-from yamusic_client import *
-from audio_player import *
-
-import os
 import random
 
-import gi
+import yandex_music
+
+from yamusic_client import *
+from audio_player import *
+from misc import *
+from ui import *
+
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gtk, Gst, Gio, GLib
 
-import pathlib
-WORK_DIR = str(pathlib.Path(__file__).parent.resolve())
-CACHE_DIR = GLib.get_user_cache_dir() + "/yamusic"
-
 import warnings
+
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 
@@ -66,8 +62,9 @@ class YamusicApp(Adw.Application):
         self.window.player_controls_frame.show_queue_button.connect("clicked", self._on_show_queue_btn_clicked)
         self.window.player_controls_frame.shuffle_playlist_button.connect("clicked", self._on_shuffle_btn_clicked)
         self.window.player_controls_frame.download_track_button.connect("clicked", self._on_download_track_btn_clicked)
-        self.window.player_controls_frame.track_volume_button.connect(
-            "clicked", lambda btn: self.window.player_controls_frame.volume_popover.show())
+        self.window.player_controls_frame.track_volume_button.connect("clicked",
+                                                                      lambda
+                                                                          btn: self.window.player_controls_frame.volume_popover.show())
 
         self.window.player_controls_frame.track_slider.connect("change-value", self._on_slider_moved)
         self.window.player_controls_frame.volume_slider.connect("value-changed", self._on_volume_slider_moved)
@@ -83,17 +80,19 @@ class YamusicApp(Adw.Application):
 
         self.window.library.play_playlist_button.connect("clicked", self._on_play_playlist_btn_clicked)
 
-        GLib.timeout_add(100, self.frame_timer)
+        GLib.timeout_add(100, self.update_timer)
 
-    def frame_timer(self):
+    def update_timer(self):
         if not (self.playing_state == "play" and self.audio_player.state is Gst.State.PLAYING):
             return True
 
+        # Setting the next track if the current one is over
         if self.audio_player.duration and self.audio_player.position // 10e8 == self.audio_player.duration // 10e8:
             self.audio_player.stop()
             self.set_next_track()
             return True
 
+        # Sync the slider range according to the track duration
         if self.audio_player.duration:
             if self.window.player_controls_frame.track_slider.get_adjustment().get_upper() != self.track_duration:
                 self.track_duration = self.audio_player.duration
@@ -101,57 +100,48 @@ class YamusicApp(Adw.Application):
             if self.track_duration != self.audio_player.duration:
                 self.track_duration = self.audio_player.duration
 
+        # Moving the slider position according to the track position
         if (diff := self.audio_player.position - self.track_position) > 0:
             self.track_position += diff
             self.window.player_controls_frame.track_slider.set_value(self.track_position)
 
+        # Well, everything is clear from the name of the function
         self.sync_timer()
 
         return True
 
+    # A function that synchronizes the timer label according to the track position
     def sync_timer(self):
-        passed_time = self.track_position // 10e8
+        # A function that makes time a little more beautiful =)
+        def beautify_time(seconds):
+            if seconds < 60:
+                seconds = str(round(seconds))
+                if len(seconds) < 2:
+                    seconds = f"0{seconds}"
+                return f"00:{seconds}"
+
+            minutes = int(seconds // 60)
+            seconds = int(seconds - minutes * 60)
+
+            minutes = str(minutes)
+            seconds = str(seconds)
+
+            if len(minutes) < 2:
+                minutes = f"0{minutes}"
+            if len(seconds) < 2:
+                seconds = f"0{seconds}"
+
+            return f"{minutes}:{seconds}"
+
+        # Getting the elapsed time and duration in seconds
+        elapsed_time = self.track_position // 10e8
         duration = self.track_duration // 10e8
 
-        if passed_time >= 60:
-            passed_minutes = int(passed_time // 60)
-            passed_seconds = int(passed_time - passed_minutes * 60)
+        # Abracadabra! Now the values are pretty!
+        elapsed_time = beautify_time(elapsed_time)
+        duration = beautify_time(duration)
 
-            passed_minutes = str(passed_minutes)
-            passed_seconds = str(passed_seconds)
-
-            if len(passed_minutes) < 2:
-                passed_minutes = f"0{passed_minutes}"
-            if len(passed_seconds) < 2:
-                passed_seconds = f"0{passed_seconds}"
-
-            passed_time = f"{passed_minutes}:{passed_seconds}"
-        else:
-            passed_time = str(int(passed_time))
-            if len(passed_time) < 2:
-                passed_time = f"0{passed_time}"
-            passed_time = f"00:{passed_time}"
-
-        if duration >= 60:
-            duration_minutes = int(duration // 60)
-            duration_seconds = int(duration - duration_minutes * 60)
-
-            duration_minutes = str(duration_minutes)
-            duration_seconds = str(duration_seconds)
-
-            if len(duration_minutes) < 2:
-                duration_minutes = f"0{duration_minutes}"
-            if len(duration_seconds) < 2:
-                duration_seconds = f"0{duration_seconds}"
-
-            duration = f"{duration_minutes}:{duration_seconds}"
-        else:
-            duration = str(int(duration))
-            if len(duration) < 2:
-                duration = f"0{duration}"
-            duration = f"00:{duration}"
-
-        self.window.player_controls_frame.track_timer.set_label(f"\n{passed_time}/{duration}")
+        self.window.player_controls_frame.track_timer.set_label(f"\n{elapsed_time}/{duration}")
 
     def _on_prev_track_btn_clicked(self, _btn):
         self.set_prev_track()
@@ -161,20 +151,16 @@ class YamusicApp(Adw.Application):
             if self.audio_player.state is Gst.State.NULL:
                 self.current_track_widget.playing_animation.stop()
                 self.window.player_controls_frame.play_track_button.set_child(
-                    Gtk.Image.new_from_gicon(Gio.ThemedIcon.new("media-playback-start-symbolic"))
-                )
+                    Gtk.Image.new_from_gicon(Gio.ThemedIcon.new("media-playback-start-symbolic")))
             return
 
         self.current_track_index -= 1
 
         if self.shuffle:
             new_track_widget: TrackWidget = self.window.library.tracks_widgets.copy().pop(
-                self.shuffled_indexes[self.current_track_index]
-            )
+                self.shuffled_indexes[self.current_track_index])
         else:
-            new_track_widget = self.window.library.tracks_widgets.copy().pop(
-                self.current_track_index
-            )
+            new_track_widget = self.window.library.tracks_widgets.copy().pop(self.current_track_index)
 
         if not new_track_widget.track_available:
             self.set_prev_track()
@@ -193,20 +179,16 @@ class YamusicApp(Adw.Application):
             if self.audio_player.state is Gst.State.NULL:
                 self.current_track_widget.playing_animation.stop()
                 self.window.player_controls_frame.play_track_button.set_child(
-                    Gtk.Image.new_from_gicon(Gio.ThemedIcon.new("media-playback-start-symbolic"))
-                )
+                    Gtk.Image.new_from_gicon(Gio.ThemedIcon.new("media-playback-start-symbolic")))
             return
 
         self.current_track_index += 1
 
         if self.shuffle:
             new_track_widget: TrackWidget = self.window.library.tracks_widgets.copy().pop(
-                self.shuffled_indexes[self.current_track_index]
-            )
+                self.shuffled_indexes[self.current_track_index])
         else:
-            new_track_widget = self.window.library.tracks_widgets.copy().pop(
-                self.current_track_index
-            )
+            new_track_widget = self.window.library.tracks_widgets.copy().pop(self.current_track_index)
 
         if not new_track_widget.track_available:
             self.set_prev_track()
@@ -243,10 +225,8 @@ class YamusicApp(Adw.Application):
             return
 
         title = self.current_playing_playlist_widget.playlist["title"]
-        self.window.library.playlist_info_label.set_markup(
-            f"<sup><i>Плейлист пользователя</i></sup>\n"
-            f"<b>{title}</b>"
-        )
+        self.window.library.playlist_info_label.set_markup(f"<sup><i>Плейлист пользователя</i></sup>\n"
+                                                           f"<b>{title}</b>")
 
         self.window.library.clear_tracks()
         self.window.library.tracks_widgets = self.tracks_queue
@@ -257,15 +237,14 @@ class YamusicApp(Adw.Application):
             self.shuffle = False
             self.current_track_index = self.shuffled_indexes[self.current_track_index]
 
-            self.window.player_controls_frame.shuffle_playlist_button.get_style_context()\
-                .remove_class("suggested-action")
+            self.window.player_controls_frame.shuffle_playlist_button.get_style_context().remove_class(
+                "suggested-action")
 
         else:
             self.shuffle = True
             self.shuffle_queue()
 
-            self.window.player_controls_frame.shuffle_playlist_button.get_style_context()\
-                .add_class("suggested-action")
+            self.window.player_controls_frame.shuffle_playlist_button.get_style_context().add_class("suggested-action")
 
     def shuffle_queue(self):
         if not self.tracks_queue:
@@ -333,16 +312,14 @@ class YamusicApp(Adw.Application):
 
     def _on_volume_slider_moved(self, slider: Gtk.Scale):
         volume = slider.get_value() / 100
-        self.change_volume(volume)
-        # self.track_volume = slider.get_value() / 100
-        # self.audio_player.set_volume(self.track_volume)
+        self.change_volume(
+            volume)  # self.track_volume = slider.get_value() / 100  # self.audio_player.set_volume(self.track_volume)
 
     def _on_volume_bnt_scrolled(self, _controller, _dx, dy):
         if 0 <= self.track_volume - dy / 8 <= 1:
             volume = self.track_volume - dy / 8
             self.window.player_controls_frame.volume_slider.set_value(volume * 100)
-            self.change_volume(volume)
-            # self.audio_player.set_volume(self.track_volume)
+            self.change_volume(volume)  # self.audio_player.set_volume(self.track_volume)
 
     def change_volume(self, volume):
         self.track_volume = volume
@@ -350,20 +327,16 @@ class YamusicApp(Adw.Application):
 
         if volume == 0:
             self.window.player_controls_frame.track_volume_button.set_child(
-                Gtk.Image.new_from_gicon(Gio.ThemedIcon.new("audio-volume-muted-symbolic"))
-            )
+                Gtk.Image.new_from_gicon(Gio.ThemedIcon.new("audio-volume-muted-symbolic")))
         elif 0 < volume <= 0.3:
             self.window.player_controls_frame.track_volume_button.set_child(
-                Gtk.Image.new_from_gicon(Gio.ThemedIcon.new("audio-volume-low-symbolic"))
-            )
+                Gtk.Image.new_from_gicon(Gio.ThemedIcon.new("audio-volume-low-symbolic")))
         elif 0.3 < volume <= 0.7:
             self.window.player_controls_frame.track_volume_button.set_child(
-                Gtk.Image.new_from_gicon(Gio.ThemedIcon.new("audio-volume-medium-symbolic"))
-            )
+                Gtk.Image.new_from_gicon(Gio.ThemedIcon.new("audio-volume-medium-symbolic")))
         else:
             self.window.player_controls_frame.track_volume_button.set_child(
-                Gtk.Image.new_from_gicon(Gio.ThemedIcon.new("audio-volume-high-symbolic"))
-            )
+                Gtk.Image.new_from_gicon(Gio.ThemedIcon.new("audio-volume-high-symbolic")))
 
     def _on_library_btn_clicked(self, _btn):
         task = Gio.Task.new(self, Gio.Cancellable.new(), None)
@@ -514,4 +487,3 @@ class YamusicApp(Adw.Application):
 
         task = Gio.Task.new(self, Gio.Cancellable.new(), None)
         GLib.idle_add(task.run_in_thread, lambda *_args: self.set_track(new_track, new_track_widget))
-

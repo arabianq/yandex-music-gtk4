@@ -1,30 +1,16 @@
 from app import *
+from misc import *
 from oauth import *
 
 import os
-import gi
-
-gi.require_version('Gtk', '4.0')
-gi.require_version('Adw', '1')
-from gi.repository import GLib
-
-GLib.threads_init()
-
-import pathlib
-
-WORK_DIR = str(pathlib.Path(__file__).parent.resolve())
-CACHE_DIR = GLib.get_user_cache_dir() + "/yamusic"
 
 
 if __name__ == "__main__":
-    dirs = [
-        CACHE_DIR, f"{CACHE_DIR}/playlists_covers", f"{CACHE_DIR}/tracks_covers",
-        f"{CACHE_DIR}/downloaded_tracks"
-    ]
+    dirs = [CACHE_DIR, f"{CACHE_DIR}/playlists_covers", f"{CACHE_DIR}/tracks_covers", f"{CACHE_DIR}/downloaded_tracks"]
 
     for directory in dirs:
         if not os.path.exists(directory):
-            os.mkdir(directory)  
+            os.mkdir(directory)
 
     if not os.path.exists(f"{CACHE_DIR}/token"):
         token = oauth()

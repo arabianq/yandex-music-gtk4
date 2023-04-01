@@ -1,4 +1,5 @@
 import gi
+
 gi.require_version('Gtk', '4.0')
 gi.require_version('Gst', '1.0')
 from gi.repository import Gst
@@ -23,8 +24,8 @@ class AudioPlayer:
         self.source.link(self.decoder)
         self.volume_controller.link(self.sink)
 
-        self.decoder.connect("pad-added", lambda d, pad: pad.link(self.volume_controller.get_static_pad("sink")))
-        # self.decoder.connect("pad-added", lambda d, pad: print(123))
+        self.decoder.connect("pad-added", lambda d, pad: pad.link(self.volume_controller.get_static_pad(
+            "sink")))
 
     @property
     def volume(self):

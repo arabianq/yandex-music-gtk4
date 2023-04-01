@@ -1,11 +1,11 @@
 import gi
+
 gi.require_version("Gtk", "4.0")
 gi.require_version("WebKit", "6.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw, WebKit, GLib
+from gi.repository import Gtk, Adw, WebKit
 
 from multiprocessing import Pipe
-import sys
 
 
 class YandexOuathWindow(Gtk.Window):
@@ -59,8 +59,7 @@ class YandexOuathApp(Adw.Application):
         self.window.present()
 
     def on_quit_action(self):
-        pass
-        # self.window.close()
+        pass  # self.window.close()
 
 
 def oauth():
