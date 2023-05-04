@@ -234,13 +234,13 @@ class TrackWidget(Gtk.Button):
             self.artists = ", ".join([artist for artist in track["artists"]]).replace("&", "and")
             self.track_id = track["id"]
             self.track_available = track["available"]
-            self.duration_ns = 12 * 10e9
+            self.duration_ms = 120_000
         else:
             self.title = track.title.replace("&", "&amp;")
             self.artists = ", ".join([artist.name for artist in track.artists]).replace("&", "and")
             self.track_id = track.id
             self.track_available = track.available
-            self.duration_ns = None
+            self.duration_ms = track.duration_ms
 
         self.set_sensitive(self.track_available)
 

@@ -1,82 +1,95 @@
-import gi
+import pygame
+pygame.init()
+pygame.mixer.init()
 
-gi.require_version('Gtk', '4.0')
-gi.require_version('Gst', '1.0')
-from gi.repository import Gst
+import requests
+import enum
+import io
+
+from misc import *
 
 
 class AudioPlayer:
     def __init__(self):
-        Gst.init(None)
-
-        self.pipeline = Gst.Pipeline.new("audio-player")
-
-        self.source = Gst.ElementFactory.make("filesrc", None)
-        self.decoder = Gst.ElementFactory.make("decodebin", None)
-        self.volume_controller = Gst.ElementFactory.make("volume", None)
-        self.sink = Gst.ElementFactory.make("autoaudiosink", None)
-
-        self.pipeline.add(self.source)
-        self.pipeline.add(self.decoder)
-        self.pipeline.add(self.volume_controller)
-        self.pipeline.add(self.sink)
-
-        self.source.link(self.decoder)
-        self.volume_controller.link(self.sink)
-
-        self.decoder.connect("pad-added", lambda d, pad: pad.link(self.volume_controller.get_static_pad(
-            "sink")))
+        self.paused = False
+        self._duration = 0
+        self._position_offset = 0
+        self.content = None
 
     @property
     def volume(self):
-        return self.volume_controller.get_property("volume")
+        return pygame.mixer.music.get_volume()
 
     @property
     def state(self):
-        return self.pipeline.get_state(0).state
+        if self.paused:
+            return AudioState.paused
+
+        if pygame.mixer.music.get_busy():
+            return AudioState.playing
+
+        return AudioState.null
 
     @property
     def duration(self):
-        duration = self.pipeline.query_duration(Gst.Format.TIME)
-        if duration[0]:
-            return duration[1]
-        return 0
+        return self._duration
+
+    @duration.setter
+    def duration(self, duration):
+        self._duration = duration
 
     @property
     def position(self):
-        position = self.pipeline.query_position(Gst.Format.TIME)
-        if position[0]:
-            return position[1]
+        if pos := pygame.mixer.music.get_pos():
+            return pos + self._position_offset
         return 0
 
-    def load_from_file(self, filepath):
-        self.stop()
-        self.pipeline.remove(self.source)
-        self.source = Gst.ElementFactory.make("filesrc", None)
-        self.source.set_property("location", filepath)
-        self.pipeline.add(self.source)
-        self.source.link(self.decoder)
+    def load_from_file(self, filepath, filetype="mp3"):
+        content = open(filepath, "rb")
+        pygame.mixer.music.load(content, filetype)
+
+        self._position_offset = 0
+        self.content = content
+
+        sound = pygame.mixer.Sound(content)
+        self.duration = round(sound.get_length() * 1000)
 
     def load_from_url(self, url):
-        self.stop()
-        self.pipeline.remove(self.source)
-        self.source = Gst.ElementFactory.make("souphttpsrc", None)
-        self.source.set_property("location", url)
-        self.source.set_property("user-agent", "audio/mpeg")
-        self.pipeline.add(self.source)
-        self.source.link(self.decoder)
+        r = requests.get(url)
+        content = io.BytesIO(r.content)
+        pygame.mixer.music.load(content, namehint="mp3")
 
-    def set_volume(self, volume):
-        self.volume_controller.set_property("volume", volume)
+        self._position_offset = 0
+        self.content = content
+
+        sound = pygame.mixer.Sound(io.BytesIO(r.content))
+        self.duration = round(sound.get_length() * 1000)
+
+    @staticmethod
+    def set_volume(volume):
+        pygame.mixer.music.set_volume(volume)
 
     def set_position(self, position):
-        self.pipeline.seek_simple(Gst.Format.TIME, Gst.SeekFlags.FLUSH, position)
+        self._position_offset = position
+        pygame.mixer.music.play(0, position / 1000)
 
     def play(self):
-        self.pipeline.set_state(Gst.State.PLAYING)
+        if self.paused:
+            self.paused = False
+            pygame.mixer.music.unpause()
+        else:
+            pygame.mixer.music.play()
 
     def pause(self):
-        self.pipeline.set_state(Gst.State.PAUSED)
+        self.paused = True
+        pygame.mixer.music.pause()
 
-    def stop(self):
-        self.pipeline.set_state(Gst.State.NULL)
+    @staticmethod
+    def stop():
+        pygame.mixer.music.stop()
+
+
+class AudioState(enum.Enum):
+    null = 0
+    playing = 1
+    paused = 2

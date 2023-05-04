@@ -81,13 +81,14 @@ class YamusicApp(Adw.Application):
         self.window.library.play_playlist_button.connect("clicked", self._on_play_playlist_btn_clicked)
 
         GLib.timeout_add(100, self.update_timer)
+        GLib.timeout_add_seconds(1, self.sync_timer)
 
     def update_timer(self):
-        if not (self.playing_state == "play" and self.audio_player.state is Gst.State.PLAYING):
+        if not (self.playing_state == "play" and self.audio_player.state is AudioState.playing):
             return True
 
         # Setting the next track if the current one is over
-        if self.audio_player.duration and self.audio_player.position // 10e8 == self.audio_player.duration // 10e8:
+        if self.audio_player.duration and self.audio_player.position == self.audio_player.duration:
             self.audio_player.stop()
             self.set_next_track()
             return True
@@ -100,18 +101,21 @@ class YamusicApp(Adw.Application):
             if self.track_duration != self.audio_player.duration:
                 self.track_duration = self.audio_player.duration
 
-        # Moving the slider position according to the track position
-        if (diff := self.audio_player.position - self.track_position) > 0:
-            self.track_position += diff
-            self.window.player_controls_frame.track_slider.set_value(self.track_position)
-
         # Well, everything is clear from the name of the function
-        self.sync_timer()
+        #self.sync_timer()
 
         return True
 
     # A function that synchronizes the timer label according to the track position
     def sync_timer(self):
+        # Moving the slider position according to the track position
+        if (diff := self.audio_player.position - self.track_position) > 500:
+            self.track_position += diff
+            self.window.player_controls_frame.track_slider.set_value(self.track_position)
+        elif diff < 0:
+            self.track_position = self.audio_player.position
+            self.window.player_controls_frame.track_slider.set_value(self.track_position)
+
         # A function that makes time a little more beautiful =)
         def beautify_time(seconds):
             if seconds < 60:
@@ -134,8 +138,8 @@ class YamusicApp(Adw.Application):
             return f"{minutes}:{seconds}"
 
         # Getting the elapsed time and duration in seconds
-        elapsed_time = self.track_position // 10e8
-        duration = self.track_duration // 10e8
+        elapsed_time = self.track_position // 1000
+        duration = self.track_duration // 1000
 
         # Abracadabra! Now the values are pretty!
         elapsed_time = beautify_time(elapsed_time)
@@ -143,12 +147,14 @@ class YamusicApp(Adw.Application):
 
         self.window.player_controls_frame.track_timer.set_label(f"\n{elapsed_time}/{duration}")
 
+        return True
+
     def _on_prev_track_btn_clicked(self, _btn):
         self.set_prev_track()
 
     def set_prev_track(self):
         if self.current_track_index <= 0:
-            if self.audio_player.state is Gst.State.NULL:
+            if self.audio_player.state is AudioState.null:
                 self.current_track_widget.playing_animation.stop()
                 self.window.player_controls_frame.play_track_button.set_child(
                     Gtk.Image.new_from_gicon(Gio.ThemedIcon.new("media-playback-start-symbolic")))
@@ -176,7 +182,7 @@ class YamusicApp(Adw.Application):
 
     def set_next_track(self):
         if self.current_track_index >= len(self.tracks_queue) - 1:
-            if self.audio_player.state is Gst.State.NULL:
+            if self.audio_player.state is AudioState.null:
                 self.current_track_widget.playing_animation.stop()
                 self.window.player_controls_frame.play_track_button.set_child(
                     Gtk.Image.new_from_gicon(Gio.ThemedIcon.new("media-playback-start-symbolic")))
@@ -298,9 +304,11 @@ class YamusicApp(Adw.Application):
                 Gtk.Image.new_from_gicon(Gio.ThemedIcon.new("folder-download-symbolic")))
 
     def _on_slider_moved(self, _widget, _enum, value):
+        # self.track_position = round(value)
+        # self.audio_player.set_position(self.track_position)
         self.track_position = value
         self.sync_timer()
-
+        #
         if self.track_positioning_timeout is not None:
             GLib.source_remove(self.track_positioning_timeout)
         self.track_positioning_timeout = GLib.timeout_add(100, lambda: self.change_track_position(value))
@@ -384,6 +392,11 @@ class YamusicApp(Adw.Application):
         for track in tracks:
             track_id = track.id if hasattr(track, "id") else track["id"]
 
+            if hasattr(track, "title") and track.title is None:
+                continue
+            elif type(track) is dict and track["title"] is None:
+                continue
+
             if self.current_track_widget and self.current_track_widget.track_id == track_id:
                 self.window.library.tracks_widgets.append(self.current_track_widget)
                 self.window.library.tracks_widgets[-1].track_number_label.set_text(
@@ -429,13 +442,13 @@ class YamusicApp(Adw.Application):
 
         title = track_widget.title
         artists = track_widget.artists
-        duration_ns = track_widget.duration_ns if track_widget.duration_ns else track.duration_ms * 10e5
+        duration_ms = track_widget.duration_ms if track_widget.duration_ms else track.duration_ms
 
         self.window.player_controls_frame.track_title_label.set_text(f"{title}\n{artists}")
         self.track_position = 0
         self.track_duration = 0
         self.window.player_controls_frame.track_slider.set_value(0)
-        self.window.player_controls_frame.track_slider.set_range(0, duration_ns)
+        self.window.player_controls_frame.track_slider.set_range(0, duration_ms)
 
         if os.path.exists(f"{CACHE_DIR}/downloaded_tracks/{track_widget.track_id}.mp3"):
             self.window.player_controls_frame.download_track_button.set_child(
