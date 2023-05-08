@@ -3,6 +3,7 @@
 ![GitHub last commit](https://img.shields.io/github/last-commit/arabianq/yandex-music-gtk4)
 ![GitHub issues](https://img.shields.io/github/issues/arabianq/yandex-music-gtk4)
 ![GitHub pull requests](https://img.shields.io/github/issues-pr/arabianq/yandex-music-gtk4)
+![GitHub license](https://img.shields.io/github/license/arabianq/yandex-music-gtk4)
 
 Этот проект представляет собой клиент для Яндекс.Музыки, написанный на Python
 
