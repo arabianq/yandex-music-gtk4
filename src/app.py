@@ -84,6 +84,7 @@ class YamusicApp(Adw.Application):
         self._on_library_btn_clicked(self.window.header_library_button)
 
         self.window.library.play_playlist_button.connect("clicked", self._on_play_playlist_btn_clicked)
+        self.window.library.search_track_line.connect("search-changed", self._search_in_playlist_changed)
 
         GLib.timeout_add(100, self.update_timer)
         GLib.timeout_add_seconds(1, self.sync_timer)
@@ -528,3 +529,23 @@ class YamusicApp(Adw.Application):
 
         task = Gio.Task.new(self, Gio.Cancellable.new(), None)
         GLib.idle_add(task.run_in_thread, lambda *_args: self.set_track(new_track, new_track_widget))
+
+    def _search_in_playlist_changed(self, entry):
+        search_request = entry.get_text().lower()
+        self.search_track_in_playlist(search_request)
+
+    def search_track_in_playlist(self, search_request):
+        for track_widget in self.window.library.tracks_widgets:
+            track_widget.playing_animation.stop()
+
+            if search_request in track_widget.title.lower() or search_request in track_widget.artists.lower():
+                track_widget.set_visible(True)
+
+                # if track_widget == self.current_track_widget:
+
+                    # track_widget.playing_animation.play()
+
+                continue
+
+            track_widget.set_visible(False)
+            track_widget.playing_animation.stop()

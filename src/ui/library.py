@@ -35,7 +35,6 @@ class Library(Gtk.Grid):
         self.users_playlists_scrolled = Gtk.ScrolledWindow()
         self.users_playlists_scrolled.set_hexpand(True)
         self.users_playlists_scrolled.set_vexpand(True)
-        self.users_playlists_scrolled.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
         self.users_playlists_frame.set_child(self.users_playlists_scrolled)
 
         self.users_playlists_box = Gtk.FlowBox(orientation=Gtk.Orientation.HORIZONTAL)
@@ -87,7 +86,6 @@ class Library(Gtk.Grid):
         self.playlist_info_label.set_natural_wrap_mode(Gtk.NaturalWrapMode.WORD)
         self.playlist_info_label.set_halign(Gtk.Align.START)
         self.playlist_info_label.set_justify(Gtk.Justification.LEFT)
-        self.playlist_info_label.set_wrap(True)
         self.playlist_info_label.set_max_width_chars(25)
         self.playlist_info_label.set_margin_start(10)
         self.playlist_info_label.set_margin_top(10)
@@ -101,6 +99,15 @@ class Library(Gtk.Grid):
             Gtk.Image.new_from_gicon(Gio.ThemedIcon.new("media-playback-start-symbolic")))
         self.playlist_info_grid.attach_next_to(self.play_playlist_button, self.playlist_info_label,
                                                Gtk.PositionType.BOTTOM, 1, 1)
+
+        self.search_track_line = Gtk.SearchEntry(placeholder_text="Найти трек...", search_delay=100)
+        self.search_track_line.set_hexpand(True)
+        self.search_track_line.set_margin_start(10)
+        self.search_track_line.set_margin_end(10)
+        self.search_track_line.set_margin_top(10)
+        self.search_track_line.set_margin_bottom(10)
+        self.playlist_info_grid.attach_next_to(self.search_track_line, self.playlist_info_label,
+                                               Gtk.PositionType.RIGHT, 1, 1)
 
         self.playlist_displayed_scrolled = Gtk.ScrolledWindow()
         self.playlist_displayed_scrolled.set_hexpand(True)

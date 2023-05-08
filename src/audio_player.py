@@ -12,13 +12,18 @@ from misc import *
 class AudioPlayer:
     def __init__(self):
         self.paused = False
+        self._volume = 1.0
         self._duration = 0
         self._position_offset = 0
         self.content = None
 
     @property
     def volume(self):
-        return pygame.mixer.music.get_volume()
+        return self._volume
+
+    @volume.setter
+    def volume(self, volume):
+        self._volume = volume
 
     @property
     def state(self):
@@ -40,7 +45,7 @@ class AudioPlayer:
 
     @property
     def position(self):
-        if pos := pygame.mixer.music.get_pos():
+        if (pos := pygame.mixer.music.get_pos()) >= 0:
             return pos + self._position_offset
         return 0
 
@@ -65,9 +70,9 @@ class AudioPlayer:
         sound = pygame.mixer.Sound(io.BytesIO(r.content))
         self.duration = round(sound.get_length() * 1000)
 
-    @staticmethod
-    def set_volume(volume):
+    def set_volume(self, volume):
         pygame.mixer.music.set_volume(volume)
+        self.volume = volume
 
     def set_position(self, position):
         self._position_offset = position
