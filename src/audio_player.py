@@ -52,7 +52,7 @@ class AudioPlayer:
         self.content = content
 
         sound = pygame.mixer.Sound(content)
-        self.duration = round(sound.get_length() * 1000)
+        self.duration = sound.get_length() * 1000
 
     def load_from_url(self, url):
         r = requests.get(url)
